@@ -106,58 +106,7 @@ plt.savefig("poker_model/outputs/charts/coefficients.png", dpi=150)
 plt.close()
 print("Chart 1 saved: coefficients.png")
 
-# Chart 2 — Profitability by Position × Board Texture
-cbet_df["position_type"] = cbet_df["is_in_position"].map(
-    {1: "In Position", 0: "Out of Position"}
-)
-cbet_df["board_type"] = pd.cut(
-    cbet_df["board_wetness_score"],
-    bins=[-1, 1, 3, 5],
-    labels=["Dry (0-1)", "Medium (2-3)", "Wet (4-5)"]
-)
-
-pivot = cbet_df.groupby(
-    ["position_type", "board_type"], observed=True
-)["cbet_profit_as_pct_of_pot"].mean().unstack()
-
-pivot.plot(kind="bar", figsize=(10, 6), colormap="RdYlGn")
-plt.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
-plt.title("C-Bet Profitability: Position × Board Texture",
-          fontsize=13, fontweight="bold")
-plt.xlabel("Position")
-plt.ylabel("Average Profit (% of pot)")
-plt.legend(title="Board Type")
-plt.xticks(rotation=0)
-plt.tight_layout()
-plt.savefig("poker_model/outputs/charts/position_board_texture.png", dpi=150)
-plt.close()
-print("Chart 2 saved: position_board_texture.png")
-
-# Chart 3 — Profitability by Number of Opponents
-opp_profits = cbet_df.groupby("num_opponents")["cbet_profit_as_pct_of_pot"].agg(
-    ["mean", "count"]
-).reset_index()
-
-fig, ax1 = plt.subplots(figsize=(9, 5))
-colors = ["#2ecc71" if v > 0 else "#e74c3c" for v in opp_profits["mean"]]
-bars = ax1.bar(opp_profits["num_opponents"], opp_profits["mean"], color=colors)
-ax1.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
-ax1.set_xlabel("Number of Opponents Facing C-Bet")
-ax1.set_ylabel("Average Profit (% of pot)")
-ax1.set_title("C-Bet Profitability by Number of Opponents",
-              fontsize=13, fontweight="bold")
-
-for bar, count in zip(bars, opp_profits["count"]):
-    ax1.text(bar.get_x() + bar.get_width()/2,
-             bar.get_height() + 0.02,
-             f"n={count:,}", ha="center", va="bottom", fontsize=9)
-
-plt.tight_layout()
-plt.savefig("poker_model/outputs/charts/opponents.png", dpi=150)
-plt.close()
-print("Chart 3 saved: opponents.png")
-
-# Chart 4 — Bet Sizing Sweet Spot
+# Chart 2 — Bet Sizing Sweet Spot
 cbet_df["sizing_bucket"] = pd.cut(
     cbet_df["cbet_size_to_pot"],
     bins=[0, 0.25, 0.40, 0.60, 0.80, 1.0, 1.5],
@@ -180,7 +129,7 @@ plt.ylabel("Average Profit (% of pot)")
 plt.tight_layout()
 plt.savefig("poker_model/outputs/charts/sizing_sweet_spot.png", dpi=150)
 plt.close()
-print("Chart 4 saved: sizing_sweet_spot.png")
+print("Chart 2 saved: sizing_sweet_spot.png")
 
 print("\nAll charts saved.")
 
