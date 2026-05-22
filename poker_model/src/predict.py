@@ -124,10 +124,10 @@ def evaluate_cbet(
     Predict the expected profitability of a c-bet.
 
     Returns a dict with:
-      expected_profit_bb  — predicted profit in big blinds
-      recommendation      — "C-BET — strong spot" / "CHECK — poor c-bet spot" etc.
-      confidence          — "high" or "low"
-      feature_breakdown   — dict of each feature's contribution (coeff × scaled value)
+      expected_profit_pct_of_pot — predicted net_profit / pot_size_at_flop (clipped ±3)
+      recommendation             — label based on percentile of test-set predictions
+      confidence                 — "high" (top/bottom 25%) or "low" (middle 50%)
+      feature_breakdown          — each feature's contribution (coeff × scaled value)
     """
     pos_map = {
         "BTN": 1, "CO": 2, "HJ": 3, "MP+1": 4,
@@ -170,20 +170,22 @@ def evaluate_cbet(
         sorted(contributions.items(), key=lambda x: abs(x[1]), reverse=True)
     )
 
-    if ev_bb > 0.5:
-        rec, conf = "C-BET — strong spot", "high"
-    elif ev_bb > 0:
-        rec, conf = "C-BET — marginal spot", "low"
-    elif ev_bb > -0.5:
-        rec, conf = "CHECK — marginal spot", "low"
+    # Thresholds derived from actual test-set prediction distribution (n=3,864):
+    #   p25=0.1712  p50=0.2114  p75=0.2564
+    if ev_bb > 0.2564:
+        rec, conf = "C-BET — strong spot", "high"       # top 25%
+    elif ev_bb > 0.2114:
+        rec, conf = "C-BET — marginal spot", "low"      # 50th–75th percentile
+    elif ev_bb > 0.1712:
+        rec, conf = "CHECK — marginal spot", "low"      # 25th–50th percentile
     else:
-        rec, conf = "CHECK — poor c-bet spot", "high"
+        rec, conf = "CHECK — poor c-bet spot", "high"   # bottom 25%
 
     return {
-        "expected_profit_bb": round(ev_bb, 3),
-        "recommendation":     rec,
-        "confidence":         conf,
-        "feature_breakdown":  contributions_sorted,
+        "expected_profit_pct_of_pot": round(ev_bb, 4),
+        "recommendation":             rec,
+        "confidence":                 conf,
+        "feature_breakdown":          contributions_sorted,
     }
 
 
@@ -220,10 +222,10 @@ if __name__ == "__main__":
     for label, kwargs in scenarios:
         r = evaluate_cbet(**kwargs)
         print(f"  {label}")
-        print(f"    Expected profit : {r['expected_profit_bb']:+.3f} bb")
+        print(f"    Expected profit : {r['expected_profit_pct_of_pot']:+.4f} (% of pot)")
         print(f"    Recommendation  : {r['recommendation']}")
         print(f"    Confidence      : {r['confidence']}")
         print(f"    Top drivers     : ", end="")
         top3 = list(r["feature_breakdown"].items())[:3]
-        print("  |  ".join(f"{k} ({v:+.2f} bb)" for k, v in top3))
+        print("  |  ".join(f"{k} ({v:+.4f})" for k, v in top3))
         print()
