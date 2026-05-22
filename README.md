@@ -47,6 +47,7 @@ poker_model/
         charts/
             coefficients.png
             sizing_sweet_spot.png
+            profitability_by_position.png
 ```
 
 ## Running the Pipeline

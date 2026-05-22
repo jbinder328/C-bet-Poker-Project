@@ -131,6 +131,34 @@ plt.savefig("poker_model/outputs/charts/sizing_sweet_spot.png", dpi=150)
 plt.close()
 print("Chart 2 saved: sizing_sweet_spot.png")
 
+# Chart 3 — Profitability by Position
+position_order = ["BTN", "CO", "HJ", "MP", "UTG", "SB", "BB"]
+pos_stats = (
+    cbet_df[cbet_df["position"].isin(position_order)]
+    .groupby("position")["cbet_profit_as_pct_of_pot"]
+    .agg(["mean", "sem", "count"])
+    .reindex(position_order)
+    .reset_index()
+)
+
+plt.figure(figsize=(10, 5))
+colors = ["#2ecc71" if v > 0 else "#e74c3c" for v in pos_stats["mean"]]
+bars = plt.bar(pos_stats["position"], pos_stats["mean"],
+               color=colors, yerr=pos_stats["sem"], capsize=4)
+plt.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
+plt.title("C-Bet Profitability by Position\n(average profit as % of pot)",
+          fontsize=13, fontweight="bold")
+plt.xlabel("Position (BTN = best, BB = worst)")
+plt.ylabel("Average Profit (% of pot)")
+for bar, row in zip(bars, pos_stats.itertuples()):
+    plt.text(bar.get_x() + bar.get_width() / 2,
+             bar.get_height() + row.sem + 0.003,
+             f"n={row.count:,}", ha="center", va="bottom", fontsize=8)
+plt.tight_layout()
+plt.savefig("poker_model/outputs/charts/profitability_by_position.png", dpi=150)
+plt.close()
+print("Chart 3 saved: profitability_by_position.png")
+
 print("\nAll charts saved.")
 
 # Store r2 for final summary
