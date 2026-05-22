@@ -1,0 +1,4 @@
+poker_model/data/
+__pycache__/
+*.pyc
+.DS_Store
