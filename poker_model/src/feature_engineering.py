@@ -167,33 +167,50 @@ cbet_df = pd.concat([cbet_df, board_df], axis=1)
 # ─────────────────────────────────────────────
 # Step 4j — Player History Features
 # ─────────────────────────────────────────────
-# CRITICAL: Sort by timestamp FIRST, use shift(1) to prevent data leakage
-cbet_df["timestamp"] = pd.to_datetime(cbet_df["timestamp"])
-cbet_df = cbet_df.sort_values("timestamp").reset_index(drop=True)
+# CRITICAL: Sort by timestamp FIRST, use shift(1) to prevent data leakage.
+# Compute vpip/pfr history from the FULL dataset (not cbet_df) so the features
+# reflect a player's true tendencies across all hands, not just c-bet hands
+# (which would always be 1.0 since pfr==1 is a c-bet requirement).
+
+df["timestamp"] = pd.to_datetime(df["timestamp"])
+df_sorted = df.sort_values("timestamp").reset_index(drop=True)
 
 
 def rolling_player_stat(group, col):
     return group[col].shift(1).expanding(min_periods=5).mean()
 
 
-cbet_df["player_vpip_history"] = cbet_df.groupby(
-    "player_name", group_keys=False
-).apply(lambda g: rolling_player_stat(g, "vpip"))
+# Compute rolling vpip/pfr from all hands per player
+vpip_history = df_sorted.groupby("player_name", group_keys=False).apply(
+    lambda g: rolling_player_stat(g, "vpip")
+)
+pfr_history = df_sorted.groupby("player_name", group_keys=False).apply(
+    lambda g: rolling_player_stat(g, "pfr")
+)
 
-cbet_df["player_pfr_history"] = cbet_df.groupby(
-    "player_name", group_keys=False
-).apply(lambda g: rolling_player_stat(g, "pfr"))
+df_sorted["_vpip_hist"] = vpip_history
+df_sorted["_pfr_hist"] = pfr_history
 
+# Keep only the latest history value per (player, hand) — one row per hand per player
+history_map = df_sorted.set_index(["hand_id", "player_name"])[["_vpip_hist", "_pfr_hist"]]
+
+cbet_df["timestamp"] = pd.to_datetime(cbet_df["timestamp"])
+cbet_df = cbet_df.sort_values("timestamp").reset_index(drop=True)
+
+cbet_df = cbet_df.join(
+    history_map,
+    on=["hand_id", "player_name"],
+    how="left"
+)
+cbet_df["player_vpip_history"] = cbet_df["_vpip_hist"].fillna(df["vpip"].mean())
+cbet_df["player_pfr_history"] = cbet_df["_pfr_hist"].fillna(df["pfr"].mean())
+cbet_df = cbet_df.drop(columns=["_vpip_hist", "_pfr_hist"])
+
+# Winrate history stays in cbet_df (rolling c-bet profitability)
 cbet_df["player_winrate_history"] = cbet_df.groupby(
     "player_name", group_keys=False
 ).apply(lambda g: rolling_player_stat(g, "cbet_profitable"))
 
-cbet_df["player_vpip_history"] = cbet_df["player_vpip_history"].fillna(
-    cbet_df["vpip"].mean()
-)
-cbet_df["player_pfr_history"] = cbet_df["player_pfr_history"].fillna(
-    cbet_df["pfr"].mean()
-)
 cbet_df["player_winrate_history"] = cbet_df["player_winrate_history"].fillna(0.5)
 
 # ─────────────────────────────────────────────
