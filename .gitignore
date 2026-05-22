@@ -2,3 +2,8 @@ poker_model/data/
 __pycache__/
 *.pyc
 .DS_Store
+.claude/
+
+# Large generated CSVs (re-create by running the pipeline)
+poker_model/outputs/all_hands.csv
+poker_model/outputs/cbet_hands.csv
