@@ -448,6 +448,10 @@ def parse_all_files(txt_dir, output_csv):
             continue
 
     df = pd.DataFrame(all_rows)
+    before = len(df)
+    df = df.drop_duplicates(subset=["hand_id", "player_name"])
+    if len(df) < before:
+        print(f"  Dropped {before - len(df):,} duplicate rows from repeated hands in source files")
     os.makedirs(os.path.dirname(output_csv), exist_ok=True)
     df.to_csv(output_csv, index=False)
     print(f"\nSaved {len(df):,} rows ({df['hand_id'].nunique():,} hands) to {output_csv}")
