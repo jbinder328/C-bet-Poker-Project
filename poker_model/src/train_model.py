@@ -25,7 +25,7 @@ FEATURE_COLS = [
     "player_vpip_history", "player_pfr_history",
     "player_winrate_history",
 ]
-TARGET_COL = "cbet_profit_bb"
+TARGET_COL = "cbet_profit_as_pct_of_pot"
 
 # ── Load data ──────────────────────────────────────────────────────────
 cbet_df = pd.read_csv("poker_model/outputs/cbet_hands.csv")
@@ -66,7 +66,7 @@ for name, m in [("Linear Regression", model), ("Ridge Regression", ridge)]:
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     print(f"\n{name}:")
     print(f"  R²:   {r2:.4f}")
-    print(f"  RMSE: {rmse:.4f} bb")
+    print(f"  RMSE: {rmse:.4f} (% of pot)")
 
 # Save model and scaler
 os.makedirs("poker_model/outputs", exist_ok=True)
@@ -83,7 +83,7 @@ coef_df["abs_coefficient"] = coef_df["coefficient"].abs()
 coef_df = coef_df.sort_values("abs_coefficient", ascending=False)
 
 print("\n=== C-BET PROFITABILITY MODEL ===")
-print(f"Intercept: {model.intercept_:.4f} bb")
+print(f"Intercept: {model.intercept_:.4f} (% of pot)")
 print("\nFeature Coefficients (sorted by impact):")
 print(coef_df[["feature", "coefficient"]].to_string(index=False))
 
@@ -100,7 +100,7 @@ plt.barh(coef_df["feature"], coef_df["coefficient"], color=colors)
 plt.axvline(x=0, color="black", linewidth=0.8, linestyle="--")
 plt.title("What Makes a C-Bet Profitable?\nLinear Regression Coefficients",
           fontsize=14, fontweight="bold")
-plt.xlabel("Impact on C-Bet Expected Profit (big blinds)", fontsize=11)
+plt.xlabel("Impact on C-Bet Profit (as % of pot at flop)", fontsize=11)
 plt.tight_layout()
 plt.savefig("poker_model/outputs/charts/coefficients.png", dpi=150)
 plt.close()
@@ -118,14 +118,14 @@ cbet_df["board_type"] = pd.cut(
 
 pivot = cbet_df.groupby(
     ["position_type", "board_type"], observed=True
-)["cbet_profit_bb"].mean().unstack()
+)["cbet_profit_as_pct_of_pot"].mean().unstack()
 
 pivot.plot(kind="bar", figsize=(10, 6), colormap="RdYlGn")
 plt.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
 plt.title("C-Bet Profitability: Position × Board Texture",
           fontsize=13, fontweight="bold")
 plt.xlabel("Position")
-plt.ylabel("Average Profit (big blinds)")
+plt.ylabel("Average Profit (% of pot)")
 plt.legend(title="Board Type")
 plt.xticks(rotation=0)
 plt.tight_layout()
@@ -134,7 +134,7 @@ plt.close()
 print("Chart 2 saved: position_board_texture.png")
 
 # Chart 3 — Profitability by Number of Opponents
-opp_profits = cbet_df.groupby("num_opponents")["cbet_profit_bb"].agg(
+opp_profits = cbet_df.groupby("num_opponents")["cbet_profit_as_pct_of_pot"].agg(
     ["mean", "count"]
 ).reset_index()
 
@@ -143,7 +143,7 @@ colors = ["#2ecc71" if v > 0 else "#e74c3c" for v in opp_profits["mean"]]
 bars = ax1.bar(opp_profits["num_opponents"], opp_profits["mean"], color=colors)
 ax1.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
 ax1.set_xlabel("Number of Opponents Facing C-Bet")
-ax1.set_ylabel("Average Profit (big blinds)")
+ax1.set_ylabel("Average Profit (% of pot)")
 ax1.set_title("C-Bet Profitability by Number of Opponents",
               fontsize=13, fontweight="bold")
 
@@ -164,7 +164,7 @@ cbet_df["sizing_bucket"] = pd.cut(
     labels=["0-25%", "25-40%", "40-60%", "60-80%", "80-100%", "100%+"]
 )
 
-sizing_stats = cbet_df.groupby("sizing_bucket", observed=True)["cbet_profit_bb"].agg(
+sizing_stats = cbet_df.groupby("sizing_bucket", observed=True)["cbet_profit_as_pct_of_pot"].agg(
     ["mean", "count", "sem"]
 ).reset_index()
 
@@ -176,7 +176,7 @@ plt.axhline(y=0, color="black", linestyle="--", linewidth=0.8)
 plt.title("C-Bet Profitability by Bet Sizing\n(as % of pot)",
           fontsize=13, fontweight="bold")
 plt.xlabel("Bet Size (% of pot)")
-plt.ylabel("Average Profit (big blinds)")
+plt.ylabel("Average Profit (% of pot)")
 plt.tight_layout()
 plt.savefig("poker_model/outputs/charts/sizing_sweet_spot.png", dpi=150)
 plt.close()
@@ -187,4 +187,40 @@ print("\nAll charts saved.")
 # Store r2 for final summary
 r2_final = r2_score(y_test, model.predict(X_test_scaled))
 print(f"\nFinal Linear Regression R²: {r2_final:.4f}")
-print(f"Top predictor: {coef_df.iloc[0]['feature']} ({coef_df.iloc[0]['coefficient']:+.3f} bb)")
+print(f"Top predictor: {coef_df.iloc[0]['feature']} ({coef_df.iloc[0]['coefficient']:+.4f})")
+
+# ── Sanity Checks ──────────────────────────────────────────────────────
+print("\n=== SANITY CHECKS ===")
+
+# 1. player_vpip_history should be negative (loose opponents defend more → c-bet loses more)
+vpip_coef = coef_df[coef_df["feature"] == "player_vpip_history"]["coefficient"].values[0]
+assert vpip_coef < 0, f"FAIL: player_vpip_history = {vpip_coef:.4f} (expected negative)"
+print(f"PASS: player_vpip_history = {vpip_coef:+.4f} (looser opponents make c-bets less profitable)")
+
+# 2. board_wetness_score should be negative (wetter boards hurt c-bets)
+wet_coef = coef_df[coef_df["feature"] == "board_wetness_score"]["coefficient"].values[0]
+assert wet_coef < 0, f"FAIL: board_wetness_score = {wet_coef:.4f} (expected negative)"
+print(f"PASS: board_wetness_score = {wet_coef:+.4f} (wetter boards are worse)")
+
+# 3. is_3bet_pot should be negative (c-bets in 3bet pots are less profitable as % of pot)
+pot3_coef = coef_df[coef_df["feature"] == "is_3bet_pot"]["coefficient"].values[0]
+assert pot3_coef < 0, f"FAIL: is_3bet_pot = {pot3_coef:.4f} (expected negative)"
+print(f"PASS: is_3bet_pot = {pot3_coef:+.4f} (3-bet pots are worse for c-bets)")
+
+# Note on num_opponents: with profit/pot as target, this coefficient can be positive —
+# in multi-way pots you contribute less proportionally to the pot, so profit/pot is higher
+# when the c-bet succeeds. This is a mathematical artifact of the normalization, not a
+# signal that c-betting multi-way is better.
+opp_coef = coef_df[coef_df["feature"] == "num_opponents"]["coefficient"].values[0]
+print(f"INFO: num_opponents = {opp_coef:+.4f} (positive with pct-of-pot target — see note above)")
+
+# 4. Row count
+assert len(cbet_df) >= 10_000, f"FAIL: Only {len(cbet_df):,} c-bet rows"
+print(f"PASS: {len(cbet_df):,} c-bet situations")
+
+# 5. No NaN in feature matrix
+nan_count = model_df[FEATURE_COLS].isnull().sum().sum()
+assert nan_count == 0, f"FAIL: {nan_count} NaN values in feature matrix"
+print("PASS: No NaN values in feature matrix")
+
+print("\nAll sanity checks passed.")

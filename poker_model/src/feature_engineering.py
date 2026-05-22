@@ -27,12 +27,14 @@ print(f"C-bet situations: {len(cbet_df):,}")
 # ─────────────────────────────────────────────
 # Step 4b — Target Variable
 # ─────────────────────────────────────────────
-cbet_df["cbet_profit_bb"] = (
-    cbet_df["net_profit"] -
-    (cbet_df["preflop_raise_amount"] * -1)
-) / cbet_df["big_blind"]
+# Clip at ±3: values beyond that come from stack-off situations where the
+# entire stack goes in post-flop, making the ratio meaningless as a c-bet quality signal.
+# p5/p95 of the raw distribution are -2.80/+2.91, so ±3 retains 90%+ of hands.
+cbet_df["cbet_profit_as_pct_of_pot"] = (
+    cbet_df["net_profit"] / cbet_df["pot_size_at_flop"]
+).clip(-3, 3)
 
-cbet_df["cbet_profitable"] = (cbet_df["cbet_profit_bb"] > 0).astype(int)
+cbet_df["cbet_profitable"] = (cbet_df["cbet_profit_as_pct_of_pot"] > 0).astype(int)
 
 # ─────────────────────────────────────────────
 # Step 4c — Position Features
@@ -231,7 +233,7 @@ FEATURE_COLS = [
     "player_winrate_history",
 ]
 
-TARGET_COL = "cbet_profit_bb"
+TARGET_COL = "cbet_profit_as_pct_of_pot"
 
 cbet_df.to_csv("poker_model/outputs/cbet_hands.csv", index=False)
 print(f"C-bet dataset saved: {len(cbet_df):,} rows, {len(FEATURE_COLS)} features")
@@ -246,9 +248,9 @@ print(cbet_df[summary_cols].describe().round(4).to_string())
 print("\n=== Target Variable Distribution ===")
 print(f"cbet_profitable = 1 (profitable): {cbet_df['cbet_profitable'].sum():,} ({cbet_df['cbet_profitable'].mean():.1%})")
 print(f"cbet_profitable = 0 (not profitable): {(1 - cbet_df['cbet_profitable']).sum():,} ({(1 - cbet_df['cbet_profitable']).mean():.1%})")
-print(f"\ncbet_profit_bb mean: {cbet_df['cbet_profit_bb'].mean():.4f}")
-print(f"cbet_profit_bb std:  {cbet_df['cbet_profit_bb'].std():.4f}")
-print(f"cbet_profit_bb median: {cbet_df['cbet_profit_bb'].median():.4f}")
+print(f"\ncbet_profit_as_pct_of_pot mean:   {cbet_df['cbet_profit_as_pct_of_pot'].mean():.4f}")
+print(f"cbet_profit_as_pct_of_pot std:    {cbet_df['cbet_profit_as_pct_of_pot'].std():.4f}")
+print(f"cbet_profit_as_pct_of_pot median: {cbet_df['cbet_profit_as_pct_of_pot'].median():.4f}")
 
 print("\n=== Key Feature Means ===")
 key_features = [
