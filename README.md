@@ -20,12 +20,14 @@ A **c-bet** is when the preflop raiser bets again on the flop. This project:
 |---|---|---|
 | `player_vpip_history` | −0.070 | Looser opponents defend more → c-bets less profitable |
 | `cbet_size_to_pot` | +0.069 | Larger bets capture more pot when successful |
+| `num_opponents` | +0.049 | More opponents → higher profit as % of pot (see note below) |
 | `is_3bet_pot` | −0.035 | 3-bet pots are harder spots to c-bet |
-| `is_heads_up` | +0.034 | HU c-bets are more profitable than multiway |
 | `board_wetness_score` | −0.007 | Wet boards (flush/straight draws) reduce c-bet EV |
 
-**Best c-bet spot:** BTN, 1 opponent, dry board  
-**Worst c-bet spot:** BB, 3 opponents, wet board
+**Best c-bet spot:** Any position, 3 opponents, large sizing, dry board  
+**Worst c-bet spot:** Any position, 1 opponent, small sizing, wet board
+
+> **Note on `num_opponents`:** The target variable is profit as a % of the pot. In multiway pots, opponents contribute more to the pot preflop, so a successful c-bet wins a larger pot relative to what the c-bettor put in. This makes the ratio look better multiway even though absolute win rates are lower. The positive `num_opponents` coefficient reflects this normalization, not that c-betting into 3 opponents is strategically superior.
 
 ## Project Structure
 
@@ -44,8 +46,6 @@ poker_model/
         decision_matrix.csv     # EV table across 135 position/board situations
         charts/
             coefficients.png
-            position_board_texture.png
-            opponents.png
             sizing_sweet_spot.png
 ```
 
@@ -83,9 +83,9 @@ result = evaluate_cbet(
     flop_cards=["Kd", "7s", "2c"],
 )
 
-print(result["recommendation"])      # "C-BET — strong spot"
-print(result["expected_profit_bb"])  # predicted profit
-print(result["feature_breakdown"])   # per-feature contribution
+print(result["recommendation"])               # "C-BET — strong spot"
+print(result["expected_profit_pct_of_pot"])   # predicted profit as % of pot
+print(result["feature_breakdown"])            # per-feature contribution
 ```
 
 ## Target Variable
