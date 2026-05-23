@@ -170,13 +170,13 @@ def evaluate_cbet(
         sorted(contributions.items(), key=lambda x: abs(x[1]), reverse=True)
     )
 
-    # Thresholds derived from actual test-set prediction distribution (n=3,864):
-    #   p25=0.1712  p50=0.2114  p75=0.2564
-    if ev_bb > 0.2564:
+    # Thresholds derived from actual test-set prediction distribution (n=3,337):
+    #   p25=0.1664  p50=0.2127  p75=0.2646
+    if ev_bb > 0.2646:
         rec, conf = "C-BET — strong spot", "high"       # top 25%
-    elif ev_bb > 0.2114:
+    elif ev_bb > 0.2127:
         rec, conf = "C-BET — marginal spot", "low"      # 50th–75th percentile
-    elif ev_bb > 0.1712:
+    elif ev_bb > 0.1664:
         rec, conf = "CHECK — marginal spot", "low"      # 25th–50th percentile
     else:
         rec, conf = "CHECK — poor c-bet spot", "high"   # bottom 25%

@@ -91,7 +91,31 @@ cbet_df["pot_size_bb"] = (
 ).clip(0, 200)
 
 # ─────────────────────────────────────────────
-# Step 4i — Board Texture Features
+# Step 4i — Quality Filters
+# ─────────────────────────────────────────────
+print(f"\nBefore quality filters: {len(cbet_df):,}")
+
+# Category 1: Logically inconsistent hands
+cbet_df = cbet_df[cbet_df["cbet_size_to_pot"].between(0.15, 1.5)]
+print(f"After sizing filter (0.15–1.5x pot): {len(cbet_df):,}")
+
+cbet_df["_cbet_size_bb"] = cbet_df["cbet_size_to_pot"] * cbet_df["pot_size_bb"]
+cbet_df = cbet_df[cbet_df["_cbet_size_bb"] <= cbet_df["stack_depth_bb"] * 0.5]
+cbet_df = cbet_df.drop(columns=["_cbet_size_bb"])
+print(f"After shove filter (cbet ≤ 50% of stack): {len(cbet_df):,}")
+
+cbet_df = cbet_df[~((cbet_df["is_3bet_pot"] == 1) & (cbet_df["pot_size_bb"] < 8))]
+print(f"After 3bet pot sanity filter (≥8bb if 3bet): {len(cbet_df):,}")
+
+# Category 2: Low-level game indicators
+cbet_df = cbet_df[~((cbet_df["is_3bet_pot"] == 0) & (cbet_df["pot_size_bb"] < 5))]
+print(f"After min-raise filter (single-raised pot ≥5bb): {len(cbet_df):,}")
+
+cbet_df = cbet_df[cbet_df["stack_depth_bb"] >= 30]
+print(f"After stack filter (≥30bb): {len(cbet_df):,}")
+
+# ─────────────────────────────────────────────
+# Step 4j — Board Texture Features
 # ─────────────────────────────────────────────
 def parse_card(card_str):
     """Parse a card string like 'Ah' into (rank, suit)"""
