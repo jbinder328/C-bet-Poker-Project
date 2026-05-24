@@ -24,8 +24,8 @@ A **c-bet** is when the preflop raiser bets again on the flop. This project:
 | `is_3bet_pot` | −0.050 | 3-bet pots are harder spots to c-bet |
 | `is_heads_up` | +0.043 | Heads-up pots improve c-bet success rate |
 
-**Best c-bet spot:** BTN, large sizing, dry board  
-**Worst c-bet spot:** MP or UTG, small sizing, wet board
+**Best c-bet spot:** BTN, dry board  
+**Worst c-bet spot:** UTG, wet board
 
 > **Note on `num_opponents`:** The target variable is profit as a % of the pot. In multiway pots, opponents contribute more to the pot preflop, so a successful c-bet wins a larger pot relative to what the c-bettor put in. This makes the ratio look better multiway even though absolute win rates are lower. The positive `num_opponents` coefficient reflects this normalization, not that c-betting into 3 opponents is strategically superior.
 
