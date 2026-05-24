@@ -21,5 +21,5 @@ python src/predict.py           # Step 4: run demo predictions
 
 ## Notes
 - All monetary values in USD
-- Target variable: `cbet_profit_bb` (profit normalized by big blind)
-- Model predicts c-bet EV in big blinds
+- Target variable: `cbet_profit_as_pct_of_pot` (net_profit / pot_size_at_flop, clipped ±3)
+- Model predicts c-bet profitability as a fraction of the pot at flop

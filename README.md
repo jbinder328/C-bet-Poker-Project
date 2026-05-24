@@ -12,20 +12,20 @@ A **c-bet** is when the preflop raiser bets again on the flop. This project:
 
 ## Results
 
-**19,317 c-bet situations** extracted from 75,580 parsed hands.
+**16,682 c-bet situations** extracted from 75,580 parsed hands (after filtering logically inconsistent and low-quality hands).
 
 **Top predictors of c-bet profitability (% of pot):**
 
 | Feature | Coefficient | Interpretation |
 |---|---|---|
-| `player_vpip_history` | −0.070 | Looser opponents defend more → c-bets less profitable |
-| `cbet_size_to_pot` | +0.069 | Larger bets capture more pot when successful |
-| `num_opponents` | +0.049 | More opponents → higher profit as % of pot (see note below) |
-| `is_3bet_pot` | −0.035 | 3-bet pots are harder spots to c-bet |
-| `board_wetness_score` | −0.007 | Wet boards (flush/straight draws) reduce c-bet EV |
+| `cbet_size_to_pot` | +0.074 | Larger bets capture more pot when successful |
+| `player_vpip_history` | −0.066 | Looser opponents defend more → c-bets less profitable |
+| `num_opponents` | +0.057 | More opponents → higher profit as % of pot (see note below) |
+| `is_3bet_pot` | −0.050 | 3-bet pots are harder spots to c-bet |
+| `is_heads_up` | +0.043 | Heads-up pots improve c-bet success rate |
 
-**Best c-bet spot:** BTN, dry board  
-**Worst c-bet spot:** UTG, wet board
+**Best c-bet spot:** BTN, large sizing, dry board  
+**Worst c-bet spot:** MP or UTG, small sizing, wet board
 
 > **Note on `num_opponents`:** The target variable is profit as a % of the pot. In multiway pots, opponents contribute more to the pot preflop, so a successful c-bet wins a larger pot relative to what the c-bettor put in. This makes the ratio look better multiway even though absolute win rates are lower. The positive `num_opponents` coefficient reflects this normalization, not that c-betting into 3 opponents is strategically superior.
 
@@ -43,7 +43,7 @@ poker_model/
         cbet_model.pkl          # Trained LinearRegression model
         cbet_scaler.pkl         # Fitted StandardScaler
         coefficients.csv        # Feature coefficients ranked by impact
-        decision_matrix.csv     # EV table across 135 position/board situations
+        decision_matrix.csv     # EV table across 189 position/board situations
         charts/
             coefficients.png
             sizing_sweet_spot.png
